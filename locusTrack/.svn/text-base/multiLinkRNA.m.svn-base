@@ -1,0 +1,1163 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                         %
+% track = multiLink( track )                                                               %
+%
+% This is a dirty, slow function.
+%
+% The input to this function is a structure with the locus positions in it
+% for each frame. What this function does is it links the position from one
+% frame to the next to generate 'tracks'.
+%
+% On its surface, this would seem like a straight forward task--just link
+% the loci that are the closest to each other. The problem is that loci
+% appear... and disappear--either for legitimate biological reasons
+% (replication and segregation lead to the duplication of loci) and loci
+% can stick together, but loci appear and disappear due to fluctuations in
+% the fluor signal. The details of the algorithm are explained below.
+%
+% The way we have realized the tracks is by outputting full length tracks.
+% For tracks that split, before the split occurs, there are two merged
+% copies of the track moving together that split apart at the split.
+%
+% The output is put into:
+%
+% track.xtrack = xtrack(I,J) : x position.
+%                            : I is time (frame num), J which track
+%
+% track.ltrack = ltrack(I,J) : label number, unique number that allows
+%                            : a check to see if loci are in the same
+%                            : place. Merged loci have identical labels.
+%                            : I is time (frame num), J which track
+%
+% track.ntrack = ntrack(I)   : number of merged groups in frame I
+%
+% track.split  = split(K)    : Array of splitting events
+%
+% track.merge  = merge(K)    : Array of merging events
+%
+% Paul Wiggins, 8/12/2010
+% University of Washington
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [track] = multiLinkRNA( track )
+
+
+track.ELIM        = 1e-5;
+track.XLIM        = 2000;
+track.XLIM_HARD   = 2000;
+track.nn_LIM      = 15;
+%track.nn_LIM      = 4;
+JUMPT             = 5;
+JUMPT             = 8;
+
+
+
+ss = size(track.xx);
+nt = ss(1);
+nl = ss(2);
+
+% lr are reverse links (pointers)
+lr = zeros(ss);
+
+% lf are forward links (pointers)
+lf = zeros(ss);
+
+% This are generalized distance squared.
+dr = zeros(ss);
+df = zeros(ss);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The basic strategy is to find the best forard and backward links between
+% frames, based on x-poximity and frame number proximity. This loop goes
+% through each set of indices and get the best forwards and backwards links
+% which it writes into
+% lr = reverse link array
+% lf = foward link array
+% To explain this thing, let me explain some bs. The array elements point
+% to positions in the TRANSPOSED matrix, but we keep the untransposed
+% versions since it is standard practice to have time as the row index.
+%
+% The x position of the locus pointed to by pointer is
+% xxp = xx';
+% xxp(pointer)
+% the mapping to the next frame is
+% lfp = lf';
+% new_pointer = lfp(pointer);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for i = 1:nt
+    % find the reverse mapping
+    j  = max(i-JUMPT,1):(i-2);
+    if i > 1
+        j0 = i-1;
+    else
+        j0 = [];
+    end
+    % this funciton finds the pointers from frame i to frame j0
+    % frame. If no match is found in frame j0, the skip frames j can be
+    % used instead.
+    [lr(i,:),dr(i,:)] = intCompDist2( track, i, j0, j );
+    
+    
+    % find the forward mapping
+    j  = (i+2):min(i+JUMPT,nt);
+    if i < nt
+        j0 = i+1;
+    else
+        j0 = [];
+    end
+    [lf(i,:),df(i,:)] = intCompDist2( track, i, j0, j );
+end
+
+track.lf = lf;
+track.lr = lr;
+track.df = df;
+track.dr = dr;
+
+
+figure(2);
+hold on;
+
+
+intPlotConn(track.xx, lf, df, track.XLIM_HARD, -1);
+
+
+track = compFlow( track );
+
+%track = getTracksDivide( track );
+track = getTracksNoDM( track );
+
+
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                         %
+% intPlotConn
+%
+% Internal plotting function for debugging purposes.
+%                                                                         %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function intPlotConn( xx, lr, dr, CUTLIM, c )
+pixelsize = 6/60;
+
+
+ss = size(xx);
+nt = ss(1);
+nl = ss(2);
+
+xxp = xx';
+xxp = xxp(:);
+
+lrp = lr';
+lrp = lrp(:);
+
+drp = dr';
+drp = drp(:);
+
+num = numel(xxp);
+
+for n = 1:num
+    t0 = ceil(n/nl);
+    n_ = lrp(n);
+    
+    if (c == 1)&&(drp(n)>CUTLIM)
+        cc = 'c';
+    elseif (c == 1)
+        cc = 'g';
+    elseif (c == -1)&&(drp(n)>CUTLIM)
+        cc = 'm';
+    else
+        cc = 'r';
+    end
+    
+    if n_
+        tn = ceil(n_/nl);
+        plot( [t0,tn], [xxp(n),xxp(n_)]*pixelsize+c*.02, [cc,'.-'] );
+    else
+        plot( [t0], [xxp(n)]*pixelsize, ['w','.'] );
+    end
+end
+
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% getLength
+%
+% This function is obsolete and can be deleted. I leave it here for now in
+% case I want to use it in the near future.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function nn = getLength( llp, ddp, xxp, CUTLIM, start )
+global pixelsize;
+
+ss = size(xxp);
+nt = ss(2);
+nl = ss(1);
+
+MAX_NUM = 1e5;
+
+current = start;
+
+
+
+for nn = 1:MAX_NUM
+    %     if current
+    %         tt = ceil(current/nl);
+    %         plot( tt, xxp(current)*pixelsize, 'w.' );
+    %     end
+    if ~current || (ddp(current) > CUTLIM)
+        break;
+    end
+    
+    current = llp(current);
+end
+
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% compFlow
+%
+% This code calculates flow between paths in the connection scheme.
+% Basically this is a strategy to figure out dependencies and get rid of
+% regions of the traces which are spurious. At some point I'll document
+% this funciton in more detail, but for now it seems to work so we'll let
+% sleeping dogs lie.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function track = compFlow( track )
+
+CUTLIM = track.ELIM;
+
+global pixelsize;
+
+lf = track.lf;
+lr = track.lr;
+
+df = track.df;
+dr = track.dr;
+
+
+lfp = lf';
+lrp = lr';
+
+dfp = df';
+drp = dr';
+
+xx  = track.xx;
+xxp = xx';
+
+np = numel( xxp );
+
+ss = size(xx);
+nt = ss(1);
+nl = ss(2);
+
+% find ends... find loci that no one maps to.
+non_nan = find(~isnan(xxp));
+endsf = non_nan(~ismember(non_nan, lfp(:) ));
+endsr = non_nan(~ismember(non_nan, lrp(:) ));
+
+
+if 0 % Display debugging figure
+    nef = numel(endsf);
+    for i = 1:nef
+        tt =   ceil(endsf(i)/nl);
+        %    nn = getLength( lrp, drp, xxp, CUTLIM, bf(i) );
+        %    text( ind2f(i), pixelsize*xxp(ind1f(i),ind2f(i)), [' ',num2str(nn)], 'Color', 'm' );
+        
+        plot( tt, pixelsize*xxp(endsf(i)), 'mo' );
+    end
+    
+    ner = numel(endsr);
+    for i = 1:ner
+        tt =   ceil(endsr(i)/nl);
+        %    nn = getLength( lrp, drp, xxp, CUTLIM, bf(i) );
+        %    text( ind2f(i), pixelsize*xxp(ind1f(i),ind2f(i)), [' ',num2str(nn)], 'Color', 'm' );
+        
+        plot( tt, pixelsize*xxp(endsr(i)), 'co' );
+    end
+end
+
+%'hi'
+
+nf  = zeros( 1, np );
+nr  = zeros( 1, np );
+
+
+
+
+MAX_NUM = 1e5;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+nef = numel(endsf);
+for i = 1:nef
+    
+    nf_ = zeros( 1, np );
+    
+    current = endsf(i);
+    current0 = current;
+    %new_flag = 1;
+    for nn = 1:MAX_NUM
+        if ceil(current/nl) == 1
+            nf_( current0 ) = track.nn_LIM/2;
+        end
+        
+        
+        if current
+            %             tt = ceil(current/nl);
+            %             plot( tt, xxp(current)*pixelsize, 'w.' );
+            new_flag = ~nf(current) && (dfp(current0) < CUTLIM);
+            nf_( current ) = nf_( current0 ) + new_flag;
+        end
+        if ~current
+            break;
+        end
+        current0 = current;
+        current = lfp(current);
+    end
+    
+    nf = nf + nf_;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ner = numel(endsr);
+for i = 1:ner
+    
+    nr_ = zeros( 1, np );
+    
+    current = endsr(i);
+    current0 = current;
+    %new_flag = 1;
+    for nn = 1:MAX_NUM
+        if ceil(current/nl) == nt
+            nf_( current0 ) = track.nn_LIM/2;
+        end
+        
+        if current
+            %             tt = ceil(current/nl);
+            %             plot( tt, xxp(current)*pixelsize, 'w.' );
+            new_flag = ~nr(current) && (drp(current0) < CUTLIM);
+            nr_( current ) = nr_( current0 ) + new_flag;
+        end
+        if ~current
+            break;
+        end
+        current0 = current;
+        current = lrp(current);
+    end
+    
+    nr = nr + nr_;
+end
+
+nn = nr+ nf;
+
+
+ ends = unique([endsr',endsf']);
+
+%  ne = numel(ends);
+%  for j = 1:ne
+% 
+%      i = ends(j);
+%      text( ceil(i/nl), xxp(i)*pixelsize, [num2str(nr(i)), ', ' num2str(nf(i))], 'Color', 'w');
+% 
+%  end
+% 
+
+track.nn = nn;
+track.nr = nr;
+track.nf = nf;
+
+
+
+
+%intPlotNN(track )
+
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% intPlotNN
+%
+% Internal ploting function for debugging the code.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function intPlotNN(track )
+
+nn_LIM = track.nn_LIM;
+
+pixelsize = 6/60;
+
+nn = track.nn;
+xx = track.xx;
+lr = track.lr;
+lf = track.lf;
+
+
+ss = size(xx);
+nt = ss(1);
+nl = ss(2);
+
+xxp = xx';
+xxp = xxp(:);
+
+lrp = lr';
+lrp = lrp(:);
+
+lfp = lf';
+lfp = lfp(:);
+
+c = 0;
+
+num = numel(xxp);
+
+for n = 1:num
+    t0 = ceil(n/nl);
+    nr_ = lrp(n);
+    nf_ = lfp(n);
+    
+    if (nn(n)<nn_LIM)
+        ccf = 'r';
+        ccr = 'r';
+        
+        
+        if nf_
+            tn = ceil(nf_/nl);
+            plot( [t0,tn], [xxp(n),xxp(nf_)]*pixelsize+c*.02, [ccf,'.-'] );
+            plot( [t0], [xxp(n)]*pixelsize+c*.02, [ccf,'.'] );
+        else
+            plot( [t0], [xxp(n)], ['w','.'] );
+        end
+        
+        if nr_
+            tn = ceil(nr_/nl);
+            plot( [t0,tn], [xxp(n),xxp(nr_)]*pixelsize+c*.02, [ccr,'.-'] );
+            plot( [t0], [xxp(n)]*pixelsize+c*.02, [ccr,'.'] );
+        else
+            plot( [t0], [xxp(n)], ['w','.'] );
+        end
+    end
+end
+
+for n = 1:num
+    t0 = ceil(n/nl);
+    nr_ = lrp(n);
+    nf_ = lfp(n);
+    
+    if (nn(n)>=nn_LIM)
+        
+        ccf = 'g';
+        ccr = 'g';
+        
+        if nf_
+            tn = ceil(nf_/nl);
+            plot( [t0,tn], [xxp(n),xxp(nf_)]*pixelsize+c*.02, [ccf,'-'] );
+            plot( [t0], [xxp(n)]*pixelsize+c*.02, [ccf,'.'] );
+            
+        else
+            plot( [t0], [xxp(n)], ['w','.'] );
+        end
+        
+        if nr_
+            tn = ceil(nr_/nl);
+            plot( [t0,tn], [xxp(n),xxp(nr_)]*pixelsize+c*.02, [ccr,'-'] );
+            plot( [t0], [xxp(n)]*pixelsize+c*.02, [ccr,'.'] );
+        else
+            plot( [t0], [xxp(n)], ['w','.'] );
+        end
+    end
+end
+
+
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% getTracks
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function track = getTracksDivide( track )
+global pixelsize;
+
+nn_LIM = track.nn_LIM;
+
+pixelsize = 6/60;
+
+nn = track.nn;
+xx = track.xx;
+lr = track.lr;
+lf = track.lf;
+
+
+ss = size(xx);
+nt = ss(1);
+nl = ss(2);
+
+xxp = xx';
+xxp = xxp(:)';
+
+lrp = lr';
+lrp = lrp(:);
+
+lfp = lf';
+lfp = lfp(:);
+
+
+start = find((~isnan(xxp(1:nl))) .* nn(1:nl)>nn_LIM);
+
+% This is the number of paths in the first frame.
+% nAA is the initial number of paths.
+nAA = numel(start);
+% countAA is a count of the number of tracks.
+
+countAA = nAA;
+
+% count of deleted tracks (after fast split->merges)
+countDel = 0;
+
+% MAXTRACKS is just the maximm number of tracks we will keep track of.
+MAXTRACKS = 1e5;
+
+% AA is essentially a linked list of position pointers.
+% each element of these arrays holds a pointer which points
+% to both the x position in xxp and to the link list for the
+% next (lfp) and previous (lrp) step.
+AA = cell(1,MAXTRACKS);
+
+% This constant holds th minimum steps that split paths need to be appart
+% before a merge will not result in the deletion of the split. Ie we don't
+% won't to count paths that diverge for just a single time step.
+MINRUN = 4;
+
+lastSplit      = zeros(MAXTRACKS,2);
+
+% load the starting pointers into AA for the existing loci in the
+% first frame.
+for j = 1:nAA
+    AA{j} = start(j);
+end
+
+
+
+for i = 1:nt
+    
+    for j = 1:countAA
+        
+        % loop through all current link lists AA{j}
+        % get the current pointer out of AA{j}.
+        pointer = AA{j}(end);
+        
+        
+        % only increment the path if the pointer is current,
+        % rather than in the future or past. This means we
+        % advance the tracks in sync.
+        if ceil(pointer/nl)==i
+            
+            
+            % check the link lists to get the next step. Get both the forward
+            % backward tracks.
+            npointer = unique([find(lrp==pointer)',lfp(pointer)]);
+            
+            % check to make sure that npointer isn't the end of the road.
+            if ~isempty(npointer)
+                
+                % get ride of 0 pointers
+                npointer = npointer(logical(npointer));
+                
+                % make sure that npointer isn't now empty.
+                if ~isempty(npointer)
+                    
+                    % conside only links that have enough flow through them
+                    % to be included.
+                    npointer = sort(npointer(nn(npointer)>nn_LIM));
+                    
+                    nnp = numel(npointer);
+                    
+                    % loop through next steps
+                    B = AA{j};
+                    for k = 1:nnp
+                        BB = [B,npointer(k)];
+                        
+                        %                         tt0 = ceil( npointer(k)/nl );
+                        %                         xx0 = xxp(npointer(k));
+                        %                         text( tt0, pixelsize*xx0, num2str(npointer(k)), 'Color', 'w' );
+                        %                         '';
+                        
+                        % if there is only one link, increment and move on
+                        if k == 1
+                            AA{j} = BB;
+                            
+                            % if there is more than one link, that make a new
+                            % path.
+                        elseif countAA < MAXTRACKS
+                            %nlist = getTraceBack( lrp,lfp,npointer(k),pointer);
+                            %'';
+                            
+                            % increment the path count.
+                            countAA = countAA + 1;
+                            
+                            % This IS a split, so update the lastSplit
+                            % array. Update this for paths, j and the new
+                            % track j = countAA.
+                            lastSplit(countAA,:) = [j,ceil(pointer/nl)];
+                            lastSplit(j,:) = [countAA,ceil(pointer/nl)];
+                            
+                            % copy the incremented path into a new slot
+                            % into AA.
+                            AA{countAA} = BB;
+                            
+                            
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    % check for merges
+    % load A indices into a matrix A_
+    AA_ = zeros(1,countAA);
+    for j = 1:countAA
+        AA_(j) = AA{j}(end);
+    end
+    
+    % get te list of unique pointers and remove 0 (null) pointers.
+    [AA_list] = unique( AA_ );
+    AA_list = AA_list(logical(AA_list));
+    
+    % This loop groups the tracks first and then for merged tracks, as
+    % whether these tracks split fewer than MINRUN frames before. If so, we
+    % delete these tracks by replacing the link list with [0].
+    
+    for AAg = AA_list
+        
+        % get all the vertices with pointer AAg and put this list into
+        % j_list.
+        j_list = find( AAg == AA_ );
+        
+        % make a corresponding vector with listSplit for these j values
+        % that split less that MINRUN frames before.
+        lastSplit_ = lastSplit(j_list,1).*(i - lastSplit(j_list,2) < MINRUN);
+        lastSplit_ = lastSplit_';
+        
+        % also make sure that the order is right... we delete the higher j
+        % number... initially there will be two copies of each since two
+        % paths are required to merge. Here we just keep the copies with
+        % the j_lastSplit > j_list.
+        ind = logical(ismember(lastSplit_,j_list).*(j_list<lastSplit_));
+        
+        % make the list of linked lists to kill
+        kill_list = lastSplit_(ind);
+        
+        if ~isempty(kill_list)
+            
+            for j = kill_list
+                %disp( ['Remove merge. Frame = ', num2str(i), ' j = ', num2str(j),'.']);
+                % Setting AA{j} to zero eliminate this track and stops it
+                % propagating.
+                AA{j} = [0];
+                % increment the deleted path count.
+                countDel = countDel + 1;
+            end
+        end
+    end
+end
+
+
+
+% numtracks is the number of linked lists made minus the number deleted.
+numtracks = countAA-countDel;
+
+% x tracks will hold the x positions in an array. The first index is frame
+% number (time) and the second index denotes WHICH track.
+xtrack = zeros(nt,numtracks)*NaN;
+
+% l tracks hold the links or pointers. This way you can see if two paths
+% are merged by checking if the labels are the same. Same index structure
+% as xtracks.
+ltrack = zeros(nt,numtracks);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% We now have all the independent linked lists in AA, but we still need to
+% realize this as actual lists of x positions. In this part of the function
+% we generate these raw tracks.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% countTrack is a counter to keep track of track number.
+countTrack = 0;
+
+for j = 1:countAA;
+    
+    % make sure that the pointer (link) isn't 0 (null)
+    if AA{j}(1)
+        % increment countTrack num.
+        countTrack = countTrack + 1;
+        
+        % get the number of pointers in the array.
+        nAA = numel(AA{j});
+        
+        % load the first frame values into the array
+        A0 = AA{j}(1);
+        t0 = 1;
+        
+        x0 = xxp(A0);
+        xtrack(1,countTrack) = x0;
+        ltrack(1,countTrack) = A0;
+        
+        for i = 2:nAA
+            
+            % the the next link frome the list and load it in
+            A1 = AA{j}(i);
+            x1 = xxp(A1);
+            t1 = ceil( A1/ nl);
+            
+            % but if the link isn't current, filled the skipped
+            % frames with NaNs since there are no x positions to fill these
+            % spots in the matrix.
+            for ii = (t0+1):(t1-1)
+                xtrack(ii,countTrack) = NaN;
+                ltrack(ii,countTrack)  = A0;
+            end
+            % copy the next set of values into the track variables.
+            xtrack(t1,countTrack) = x1;
+            ltrack(t1,countTrack) = A0;
+            A0 = A1;
+            x0 = x1;
+            t0 = t1;
+        end
+    end
+end
+
+
+% copy these track arrays into the track structure.
+track.xtrack = xtrack;
+track.ltrack = ltrack;
+ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The last step is to keep track of merges and splits since we will be very
+% interested in what happens before and after a split.
+%
+% ntracks is a frame by frame count of the number of merged groups.
+%
+% ctracks is a frame by frame list of pointers which seems on inspection to
+% be functionally degenerate with ltracks.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ntrack = zeros(nt,1);
+ctrack = zeros(nt,numtracks);
+% go through frame by frame and figure out the merge groups.
+for i = 1:nt;
+    [A,B,C] = unique(ltrack(i,:));
+    % number of merged groups
+    ntrack(i) = numel(A);
+    % groups indexed into ctrack
+    ctrack(i,:) = C;
+end
+
+% split is a structure holding split events
+split = [];
+% merge is a structure holding merge events.
+merge = [];
+% these are the corresponding counters
+scount = 0;
+mcount = 0;
+% loop through all frames
+for i = 1:nt;
+    
+    if i>1
+        % we need to calculate what the mapping is between frames.
+        cc = ctrack(i,:);
+        cr = ctrack(i-1,:);
+        
+        bb = unique(cr);
+        bb = reshape( bb, 1, numel(bb) );
+        
+        for j = bb
+            ind0 = find(bb(j)==cr);
+            % for indexes which have indentical pointers in the last frame,
+            % check to see if they are identical in the current frames.
+            A = unique(cc( ind0 ));
+            
+            if numel(A) > 1
+                % there is s splitting event since things that are
+                % indentical in the previous frame are different in the
+                % current frame.
+                scount = scount+1;
+                
+                % For each initial index ind0 (in the previous frame ),
+                % figure out which paths (ind1) it maps to in the next
+                % frame
+                ind1 = {};
+                
+                A = reshape( A, 1, numel(A));
+                for k = A
+                    ind1 = {ind1{:}, find(k==cc)};
+                end
+                
+                % Load these into the split structure.
+                split(scount).time = i;
+                split(scount).in = ind0;
+                split(scount).out= ind1;
+                
+            end
+            
+        end
+    end
+    
+    if i<nt
+        % we need to calculate what the mapping is between frames.
+        % similar strategy as above except we are figuring out which paths
+        % merge. See comments from above.
+        cc = ctrack(i,:);
+        cf = ctrack(i+1,:);
+        
+        bb = unique(cf);
+        bb = reshape( bb, 1, numel(bb) );
+        
+        for j = bb
+            ind1 = find(bb(j)==cf);
+            A = unique(cc( ind1 ));
+            
+            if numel(A) > 1
+                mcount = mcount+1;
+                ind0 = {};
+                
+                A = reshape( A, 1, numel(A));
+                for k = A
+                    ind0 = {ind0{:}, find(k==cc)};
+                end
+                
+                
+                merge(mcount).time = i;
+                merge(mcount).in = ind0;
+                merge(mcount).out= ind1;
+                %'';
+            end
+            
+        end
+    end
+    
+end
+
+% copy theses vaiables into the structure.
+track.ntrack = ntrack;
+track.ctrack = ctrack;
+track.split  = split;
+track.merge  = merge;
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% getTraceBack
+%
+% Obsolete function that sees how far back you have to trace things to get
+% back to the same point... don't really remember. Probably should kill
+% this function.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function nlist = getTraceBack( lrp, lfp, start, avoid )
+
+
+
+npointer = max(unique([find(lfp==start)',lrp(start)]));
+
+if npointer == avoid
+    nlist = [];
+else
+    nlist = npointer;
+end
+
+
+for i = 1:5
+    if npointer
+        npointer = max(unique([find(lfp==npointer)',lrp(npointer)]));
+        nlist = [nlist,npointer];
+    else
+        break
+    end
+end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                         %
+% [ind,E0] = intCompDist2
+%
+% This function return the best link between vertices.
+%
+% xx is a (nt,nl) array that holds the longaxis position.
+%                                                                         %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [ind,E0] = intCompDist2( track, i, j0, j )
+EX     = 1;
+ET     = 15;
+ESC    = .0;
+
+XLIM   = track.XLIM;
+
+ss = size(track.xx);
+nl = ss(2);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Analyze distance to the neighboring steps
+
+if ~isempty(j0)
+    
+    [ord,DX2min] = bestLink2( track.xx(i,:), track.xx(j0,:));
+    
+    
+    ind = 0*ord;
+    tmp = DX2min<XLIM;
+    E0 = 0*ord;
+    
+    ind(tmp) = ord(tmp)+(j0-1)*nl;
+    
+    
+    
+    if all(logical(ind) + isnan(track.xx(i,:)))
+        
+        %%
+        
+    else
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        CUTLIM = track.ELIM;
+        XLIM_HARD = 100^2; %track.XLIM_HARD;
+        
+        if ~isempty(j)
+            j = reshape(j,1,numel(j));
+            
+            xx_i = track.xx(i,:);
+            xx_j = track.xx(j,:);
+            
+            yy_i = track.yy(i,:);
+            yy_j = track.yy(j,:);
+            
+            sc_i = track.sc(i,:);
+            sc_j = track.sc(j,:);
+            
+            ss = size(track.xx(j,:));
+            nt = ss(1);
+            nl = ss(2);
+            
+            tt_j = abs(j-i)'*ones(1,nl);
+            
+            xx_j_ = xx_j';
+            yy_j_ = yy_j';
+            sc_j_ = sc_j';
+            tt_j_ = tt_j';
+            
+            xx_j_ = xx_j_(:);
+            yy_j_ = yy_j_(:);
+            sc_j_ = sc_j_(:);
+            tt_j_ = tt_j_(:);
+            
+            ntt = numel(tt_j_);
+            
+            XX_j= xx_j_*ones(1,nl);
+            XX_i= ones(ntt,1)*xx_i;
+            
+            YY_j= yy_j_*ones(1,nl);
+            YY_i= ones(ntt,1)*yy_i;
+            
+            SC_j= sc_j_*ones(1,nl);
+            SC_i= ones(ntt,1)*sc_i;
+            
+            SR_j= (sc_j_/max(sc_j_))*ones(1,nl);
+            SR_i= ones(ntt,1)*(sc_i/max(sc_i));
+
+            
+            DX2 = (XX_i-XX_j).^2;
+            DY2 = (YY_i-YY_j).^2;
+            DSC = abs(SC_i-SC_j);
+            DTT = tt_j_*ones(1,nl);
+            DSR = abs(SR_i-SR_j);
+
+            
+            
+            %E = EX*DX2 + EX*DY2 + ET*DTT.^2 + ESC*DSC;
+            E = EX*(DX2+DY2)./DTT + ET*DTT + ESC*DSC + ...
+                100*(DX2>XLIM_HARD) + ...
+                200*DSR.^2;
+            
+            [E0__,ind__] = min(E);
+            
+            
+            ind__ = ind__+(j(1)-1)*nl;
+            ind__(isnan(E0__)) = 0;
+            %ind(E0>CUTLIM) = 0;
+            
+        else
+            
+            ss = size(track.xx(i,:));
+            nt = ss(1);
+            nl = ss(2);
+            
+            ind__ = zeros(1,nl);
+            E0__  = zeros(1,nl)*NaN;
+        end
+        
+        
+        E0(~ind) = E0__(~ind);
+        ind(~ind) = ind__(~ind);
+    end
+else
+    ss = size(track.xx(i,:));
+    nt = ss(1);
+    nl = ss(2);
+    
+    ind = zeros(1,nl);
+    E0  = zeros(1,nl)*NaN;
+end
+
+% if any(~ind.*~isnan(track.xx(i,:)))
+%     '';
+% end
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% getTracksNoDM
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function track = getTracksNoDM( track )
+global pixelsize;
+
+% minimum total flow limit
+nn_LIM = track.nn_LIM;
+
+pixelsize = 6/60;
+
+% total flow for each locus
+nn = track.nn;
+
+% these are the x -positions of different focus
+xx = track.xx;
+
+% lr is the best reverse link for each focus, value is a pointer 
+lr = track.lr;
+
+% lf is the best forward link for each focus, value is a pointer 
+lf = track.lf;
+
+lrp = lr';
+lfp = lf';
+xxp = xx';
+scp = track.sc';
+
+ss = size(xx);
+nn_ = reshape( nn, size(xx'))';
+
+% number of time points
+nt = ss(1);
+
+% number of loci (foci)
+nl = ss(2);
+
+maxtrack = 10;
+
+% These are the tracks that we will initially lead in nans
+% ltrack is a list of points corresponding to individual tracks
+ltrack = zeros( [nt,maxtrack] );
+link   = zeros( [1,maxtrack] );
+numtrack = 0;
+
+for tt = 1:nt
+
+%     if tt == 27;
+%         'hi'
+%     end
+    
+    % if not at the first time step, do the standard assignments
+    if tt>1
+        
+        if tt == 30
+            'hi'
+        end
+        %link = ltrack(tt-1,:);
+        % initialize current forward links to null
+        link_f = 0*link;
+        
+        % load in the forward map off current tracks
+        link_f(logical(link))  = lfp(link(logical(link)));
+        
+        % map these back to the current position using the resverse links
+        link_fr = 0*link_f;
+        link_fr(logical(link_f)) = lrp(link_f(logical(link_f)));
+        
+        
+        indCont = all( [ logical(link);... % consider only existing tracks
+                         true(size(link_fr==link));... % current point is equal to forward reverse mapped pointer
+                         floor((link_f-1)/nl)+1==tt ], 1 ); % maps to a locus in the next time point
+        
+        indEnd  = and(logical(link),~indCont);
+        
+        %link        
+        link(indCont) = link_f(indCont);
+        link(indEnd)  = 0;
+        
+        % find pointers to loci with flow above cut off
+        link_add = (find( nn_(tt,:) > nn_LIM )+(tt-1)*nl);
+    
+        % remove pointers that are part of an existing track
+        link_add = link_add( ~ismember( link_add, link_f) );
+        
+        % don't add the track if it points to the same track as an existing
+        % track in the next step
+        link_add = link_add( ~ismember( lfp(link_add), lfp(link(logical(link)))) );
+
+        if  any(indEnd) && ~isempty( link_add )
+            % Check to see if a new track is being created that an ending track
+            % is pointing t
+            ind = find( indEnd );
+            indCont = ind(ismember(link_f(indEnd),link_add));
+            link(indCont) = link_f(indCont);
+        end
+        
+        ltrack(tt,indCont)  = link(indCont);
+        
+    else
+        % load in null links for the current forward links (link_f)
+        % No existing tracks at tt==1
+        link_f = zeros(1,nl);
+
+        % find pointers to loci with flow above cut off
+    link_add = (find( nn_(tt,:) > nn_LIM )+(tt-1)*nl);
+    
+    % remove pointers that are part of an existing track
+    link_add = link_add( ~ismember( link_add, link_f));
+
+    end
+    
+    
+    % add new tracks
+    for ii = 1:numel(link_add)
+        numtrack = numtrack + 1;
+        ltrack(tt,numtrack) = link_add(ii); 
+        link(numtrack) = link_add(ii); 
+    end
+    
+end
+
+
+% copy these track arrays into the track structure.
+
+ltrack = ltrack(:,1:numtrack);
+xtrack = nan( [ss(1),numtrack] );
+strack = nan( [ss(1),numtrack] );
+
+xtrack(logical(ltrack)) = xxp(ltrack(logical(ltrack)));
+strack(logical(ltrack)) = scp(ltrack(logical(ltrack)));
+
+track.xtrack = xtrack;
+track.ltrack = ltrack;
+track.strack = strack; 
+
+end
+

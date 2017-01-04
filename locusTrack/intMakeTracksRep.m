@@ -1,0 +1,365 @@
+function datatracks = intMakeTracksRep( data_cell, cut )
+% intMakeTracksRep makes tracks
+%
+% data_cell : cell data file
+% cut      : fluorescence cutoff value
+% datatracks has the format
+tic()
+eConst.s = 0.5; % score weight
+eConst.r = 1; % distance weight for score
+eConst.p_end    = 0.1;
+eConst.p_start  = 0.1;
+eConst.p_join   = 0;
+eConst.p_split  = 1.0;
+%eConst.p_split  = .0;
+
+eConst.p_skip   = 0.1;
+eConst.dr_cut   = 0.35;
+eConst.min_split_length = 2;
+
+
+s = [drill(data_cell.CellA,'.locus1(1).score')',...
+     drill(data_cell.CellA,'.locus1(2).score')',....
+     drill(data_cell.CellA,'.locus1(3).score')',....
+     drill(data_cell.CellA,'.locus1(4).score')',....
+     drill(data_cell.CellA,'.locus1(5).score')'];
+
+ 
+x = [drill(data_cell.CellA,'.locus1(1).longaxis')',...
+     drill(data_cell.CellA,'.locus1(2).longaxis')',....
+     drill(data_cell.CellA,'.locus1(3).longaxis')',....
+     drill(data_cell.CellA,'.locus1(4).longaxis')',....
+     drill(data_cell.CellA,'.locus1(5).longaxis')']*.1;
+ 
+ 
+ 
+y = [drill(data_cell.CellA,'.locus1(1).shortaxis')',...
+     drill(data_cell.CellA,'.locus1(2).shortaxis')',....
+     drill(data_cell.CellA,'.locus1(3).shortaxis')',....
+     drill(data_cell.CellA,'.locus1(4).shortaxis')',....
+     drill(data_cell.CellA,'.locus1(5).shortaxis')']*.1;
+   
+max_cut = 5; 
+
+dr_cut = eConst.dr_cut;
+
+ss =  size( s );
+T  = ss(1);
+num_score = ss(2);
+
+active = [];
+
+NT = 100;
+trace = zeros( [T,NT] );
+nt = 0;
+
+for tt = 1:T
+    
+    ind = find( s(tt,:) > cut );
+    
+    new = ind(~ismember( ind, active ));
+    
+    for ii = 1:numel(new)
+        nt = nt+1;
+        trace(tt,nt) = new(ii);
+    end
+    
+    for ii = 1:numel(active)
+        trace(tt, pointer(ii) ) = active(ii);
+    end
+    
+    if tt ~= T
+        active = [];
+        pointer = [];
+        map  = [];
+        
+        % loop through loci in order of score and map them...
+        for ii_ = 1:num_score
+            
+            ii = find( trace(tt,:)==ii_ );
+            
+            if numel( ii ) > 1
+                disp( 'bad error... too many matches' );
+            elseif numel( ii ) == 1
+                if  trace(tt, ii )
+                    dx = x(tt,trace(tt, ii )) - x(tt+1,:);
+                    dy = y(tt,trace(tt, ii )) - y(tt+1,:);
+                    ds = log( s(tt,trace(tt, ii )) ) - ...
+                        log( s(tt+1,:) );
+                    
+                    dr = sqrt(dx.^2 + dy.^2);
+                    
+                    
+                    
+                    ind_dr = find( dr < dr_cut );
+                    
+                    % remove used guys
+                    ind_dr = ind_dr( and(~ismember( ind_dr, active ), s(tt+1,ind_dr)>cut ));
+                    map = 0;
+                    
+                    if ~isempty( ind_dr )
+                        %[score_tmp,ind_dr2] = max( s(tt+1,ind_dr));
+                        score_tmp = makeScore( dx, dy, ds, eConst );
+                        [tmp__,ind_dr2] = sort( score_tmp(ind_dr));
+                        
+                        %if (score_tmp > cut) && ~ismember( ind_dr(ind_dr2), active)
+                        if ~ismember( ind_dr(ind_dr2(1)), active)
+                            map = ind_dr(ind_dr2(1));
+                            active = [active, map];
+                            pointer= [pointer,ii];
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+%% Fix skips
+
+% list of tracks that have been merged in
+kill_list = [];
+
+data.x = x;
+data.y = y;
+data.s = s;
+data.trace = trace;
+
+data = intMerger( data, eConst );
+data = intSplit( data, eConst );
+
+
+trace = data.trace;
+
+
+
+%%
+plot_flag = false;
+
+
+if plot_flag
+    
+    figure(4)
+    clf
+    
+    cc = {'r','y','g','c','b','m' };
+    set( gca, 'Ydir', 'Reverse')
+    hold on;
+    
+end
+
+
+dt = nan( [1,NT] );
+s_max = nan([1,NT] );
+
+for tt = 1:NT
+    
+    tvec = 1:T;
+    
+    ind = trace(tvec,tt);
+    
+    ind_  = ind(ind>0);
+    tvec_ = tvec(ind>0);
+    
+    x_ = diag(x(tvec_, ind_));
+    s_ = diag(s(tvec_, ind_));
+    
+    
+    dt(tt)    = numel(x_);
+    
+    if dt(tt) > 0
+        s_max(tt) = max( s_ );
+    end
+    
+    if true %s_max(tt) > 5
+        if plot_flag
+            plot( -x_,tvec_, '.-', 'Color', cc{1+mod(tt,6)} );
+            
+            for ii = 1:numel( x_ )
+                text( -x_(ii), tvec_(ii), num2str( floor(s_(ii)), '%d' ));
+            end
+        end
+    end
+    
+end
+
+
+if plot_flag
+ylim( [0, T+1] );
+end
+
+data.dt = dt;
+data.s_max = s_max;
+data.trace = trace;
+
+'hi';
+
+disp( toc);
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function data = intSplit( data, eConst );
+
+
+trace = data.trace;
+
+col = size( trace, 2 );
+starter = zeros( [1,col] );
+ender   = zeros( [1,col] );
+
+
+num_track = sum((trace>0),1);
+
+for ii = 1:col
+          tmp = find( trace(:,ii), 1, 'first' );
+          if ~isempty( tmp)
+              starter(ii) = tmp;
+          end
+end
+
+ind_t = find( and( starter >1, num_track > eConst.min_split_length ) );
+
+% figure(7);
+% clf;
+% imshow( trace, [] );
+
+
+for ii = 1:numel(ind_t)
+    
+    
+    
+    % find possible matches to make a split
+    ind_tm = 1:col;
+    
+    t1 = starter(ind_t(ii));
+    t2 = t1-1;
+    
+    if t2>0
+        
+        % find non-null traces
+        ind_tm = ind_tm( trace(t2,:) > 0);
+        
+        % not matching the current trace
+        ind_tm = ind_tm(ind_tm~=ind_t(ii));
+        
+        
+        
+        ind1_ = trace( t1, ind_t(ii)  );
+        ind2_ = trace( t2, ind_tm );
+        
+        dx = data.x( t1, ind1_ ) - data.x( t2, ind2_ );
+        dy = data.y( t1, ind1_ ) - data.y( t2, ind2_ );
+        ds = abs(log(data.s( t1, ind1_ )) - log(data.s( t2, ind2_ )));
+        
+        dr = sqrt( dx.^2 + dy.^2 );
+        score = exp(-makeScore( dx, dy, ds, eConst ))*eConst.p_split/eConst.p_start;
+        
+        ind2__ = ind2_(dr<eConst.dr_cut);
+        score  = score(dr<eConst.dr_cut);
+        ind_tm = ind_tm(dr<eConst.dr_cut);
+        
+        [score_max, which_ind] = max( score );
+        
+        if score_max > 1;
+            ind2   = ind2__( which_ind );
+            ind_tm = ind_tm( which_ind );
+            
+            trace( 1:t2, ind_t(ii) ) = trace( 1:t2, ind_tm );
+        end
+        
+    end
+    
+    
+    
+end
+
+data.trace = trace;
+
+
+end
+
+
+
+
+function [data] = intMerger( data, eConst )
+
+trace = data.trace;
+
+col = size( trace, 2 );
+starter = zeros( [1,col] );
+ender   = zeros( [1,col] );
+
+
+for ii = 1:col
+          tmp = find( trace(:,ii), 1, 'first' );
+          if ~isempty( tmp)
+              starter(ii) = tmp;
+          end
+          
+          
+          tmp = find( trace(:,ii), 1, 'last' );
+          if ~isempty( tmp)
+             ender(ii) = tmp;
+          end 
+end
+
+lastind = find( starter, 1, 'last' );
+ran = 1:lastind;
+
+dd = -ender(ran)'*ones([1,lastind]) + ones([lastind,1])*starter(ran);
+
+[I,J] = ind2sub( size(dd), find( dd == 2 )  );
+
+hit_flag = false;
+
+for ii = 1:numel(I)
+   
+    ind1 = I(ii);
+    ind2 = J(ii);
+    
+    t1 = ender(ind1);
+    t2 = starter(ind2);
+    
+    ind1_ = trace( t1, ind1 );
+    ind2_ = trace( t2, ind2 );
+    
+    dx = data.x( t1, ind1_ ) - data.x( t2, ind2_ );
+    dy = data.y( t1, ind1_ ) - data.y( t2, ind2_ );
+    ds = abs(log(data.s( t1, ind1_ )) - log(data.s( t2, ind2_ )));
+    
+    score = exp(-makeScore( dx, dy, ds, eConst ))*eConst.p_skip/...
+        (eConst.p_end*eConst.p_start);
+    
+    dr = sqrt( dx.^2 + dy.^2 );
+    
+    if (score > 1) && dr < eConst.dr_cut
+       
+         trace( :, ind1 ) = trace( :, ind1 ) + trace( :, ind2 );
+         trace( t1+1, ind1 ) = -1; 
+         trace = trace(:,[1:ind2-1,ind2+1:end,end]);
+        
+        data.trace = trace;
+        
+        [data] = intMerger( data, eConst );
+        
+        break;
+    end
+end
+
+'hi'
+end
+
+
+
+
+function score = makeScore( dx, dy, ds, eConst )
+
+dr = sqrt(dx.^2 + dy.^2);
+
+
+score = eConst.r*dr + eConst.s*abs(ds);
+
+end
+

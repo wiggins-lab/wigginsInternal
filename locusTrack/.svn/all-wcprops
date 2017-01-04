@@ -1,0 +1,359 @@
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/groups/wiggins/svn/code/!svn/ver/1372/superSeggerOpti/locusTrack
+END
+makeCountImSteppy.m
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/groups/wiggins/svn/code/!svn/ver/1368/superSeggerOpti/locusTrack/makeCountImSteppy.m
+END
+makeSRimCount.m
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/groups/wiggins/svn/code/!svn/ver/1346/superSeggerOpti/locusTrack/makeSRimCount.m
+END
+detFilter.m
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/detFilter.m
+END
+findFocusImmortal.m
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/groups/wiggins/svn/code/!svn/ver/1345/superSeggerOpti/locusTrack/findFocusImmortal.m
+END
+findFocusImmortalSkipInt.m
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/groups/wiggins/svn/code/!svn/ver/1367/superSeggerOpti/locusTrack/findFocusImmortalSkipInt.m
+END
+intFindFociCyto.m
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/groups/wiggins/svn/code/!svn/ver/1368/superSeggerOpti/locusTrack/intFindFociCyto.m
+END
+trackOptiSumLoci.m
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/groups/wiggins/svn/code/!svn/ver/1367/superSeggerOpti/locusTrack/trackOptiSumLoci.m
+END
+bestLinkTmp.m
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/bestLinkTmp.m
+END
+getLocusTracks.m
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/groups/wiggins/svn/code/!svn/ver/1339/superSeggerOpti/locusTrack/getLocusTracks.m
+END
+makeCountim2.m
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/makeCountim2.m
+END
+compSpotPosDevFmin.m
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/groups/wiggins/svn/code/!svn/ver/1329/superSeggerOpti/locusTrack/compSpotPosDevFmin.m
+END
+intFindFociPAWDet.m
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/intFindFociPAWDet.m
+END
+histStepCell.m
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/groups/wiggins/svn/code/!svn/ver/1323/superSeggerOpti/locusTrack/histStepCell.m
+END
+intCytoFluorFit.m
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/intCytoFluorFit.m
+END
+intFindFociPAW.m
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/intFindFociPAW.m
+END
+trackOptiAnTrack.m
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/groups/wiggins/svn/code/!svn/ver/1093/superSeggerOpti/locusTrack/trackOptiAnTrack.m
+END
+intMakeTracksRep.m
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/groups/wiggins/svn/code/!svn/ver/1372/superSeggerOpti/locusTrack/intMakeTracksRep.m
+END
+trackOptiFindLoci_.m
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/trackOptiFindLoci_.m
+END
+intTrackCellSpots.m
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/intTrackCellSpots.m
+END
+makeSRim.m
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/groups/wiggins/svn/code/!svn/ver/1339/superSeggerOpti/locusTrack/makeSRim.m
+END
+makeImmortalRegions.m
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/groups/wiggins/svn/code/!svn/ver/1367/superSeggerOpti/locusTrack/makeImmortalRegions.m
+END
+multiLinkRNA.m
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/groups/wiggins/svn/code/!svn/ver/1368/superSeggerOpti/locusTrack/multiLinkRNA.m
+END
+bestLink.m
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/bestLink.m
+END
+findFocusImmortalSkip.m
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/groups/wiggins/svn/code/!svn/ver/1368/superSeggerOpti/locusTrack/findFocusImmortalSkip.m
+END
+makeCountim.m
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/makeCountim.m
+END
+BatchSpotTrack.m
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/BatchSpotTrack.m
+END
+makeFluorRegions.m
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/makeFluorRegions.m
+END
+findFocusImmortalStat.m
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/findFocusImmortalStat.m
+END
+compSpotPosDevFmin2.m
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/compSpotPosDevFmin2.m
+END
+compSpotPosDevFmin3.m
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/compSpotPosDevFmin3.m
+END
+compSpotPosDevFminFull.m
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/compSpotPosDevFminFull.m
+END
+compSpotPosDevFmin4.m
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/compSpotPosDevFmin4.m
+END
+findFocusSR.m
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1254/superSeggerOpti/locusTrack/findFocusSR.m
+END
+compSpotPosDev.m
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/compSpotPosDev.m
+END
+compSpotPos.m
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/compSpotPos.m
+END
+findFocusSRc.m
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/groups/wiggins/svn/code/!svn/ver/1339/superSeggerOpti/locusTrack/findFocusSRc.m
+END
+findFocusT6.m
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/findFocusT6.m
+END
+curveFilter.m
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/curveFilter.m
+END
+makeImmortalRegionsModel.m
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/makeImmortalRegionsModel.m
+END
+getLocusTracksDev.m
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/groups/wiggins/svn/code/!svn/ver/1372/superSeggerOpti/locusTrack/getLocusTracksDev.m
+END
+bestLink2.m
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/bestLink2.m
+END
+trackOptiFindFociCyto.m
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/groups/wiggins/svn/code/!svn/ver/1371/superSeggerOpti/locusTrack/trackOptiFindFociCyto.m
+END
+trackOptiFindLociData.m
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/trackOptiFindLociData.m
+END
+intFindFociCytoPAW.m
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/intFindFociCytoPAW.m
+END
+makeImmortalRegionsModelJ.m
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/makeImmortalRegionsModelJ.m
+END
+multiLink.asv
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1172/superSeggerOpti/locusTrack/multiLink.asv
+END
+AnnealTracks.m
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/groups/wiggins/svn/code/!svn/ver/1078/superSeggerOpti/locusTrack/AnnealTracks.m
+END
+SR2.m
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/groups/wiggins/svn/code/!svn/ver/1254/superSeggerOpti/locusTrack/SR2.m
+END
+findFocusSR2.m
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/groups/wiggins/svn/code/!svn/ver/1344/superSeggerOpti/locusTrack/findFocusSR2.m
+END
+intTrackSpotsDev.m
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/groups/wiggins/svn/code/!svn/ver/1086/superSeggerOpti/locusTrack/intTrackSpotsDev.m
+END
+compSpotPosDev2.m
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/groups/wiggins/svn/code/!svn/ver/1165/superSeggerOpti/locusTrack/compSpotPosDev2.m
+END
+findFocusSR3.m
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/groups/wiggins/svn/code/!svn/ver/1352/superSeggerOpti/locusTrack/findFocusSR3.m
+END
+recordNeighborTracesT6.m
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/groups/wiggins/svn/code/!svn/ver/1369/superSeggerOpti/locusTrack/recordNeighborTracesT6.m
+END
+intTrackSpots.m
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/groups/wiggins/svn/code/!svn/ver/1317/superSeggerOpti/locusTrack/intTrackSpots.m
+END
+multiLink.m
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/groups/wiggins/svn/code/!svn/ver/1372/superSeggerOpti/locusTrack/multiLink.m
+END
+trackOptiFindLoci.m
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/groups/wiggins/svn/code/!svn/ver/1367/superSeggerOpti/locusTrack/trackOptiFindLoci.m
+END
+intFindFociPAWCurve.m
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/groups/wiggins/svn/code/!svn/ver/1372/superSeggerOpti/locusTrack/intFindFociPAWCurve.m
+END
+makeCountIm.m
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/groups/wiggins/svn/code/!svn/ver/1352/superSeggerOpti/locusTrack/makeCountIm.m
+END
+findFocusImmortalSkipIntW.m
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/groups/wiggins/svn/code/!svn/ver/1368/superSeggerOpti/locusTrack/findFocusImmortalSkipIntW.m
+END
